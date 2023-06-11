@@ -32,7 +32,7 @@ async function CreateWallet() {
   // Create new keys
   const newAccountPrivateKey = PrivateKey.generateED25519()
   const newAccountPublicKey = newAccountPrivateKey.publicKey
-
+  console.log('\nNew account ID: ' + newAccountPrivateKey.toStringRaw())
   // Create a new account with 1,000 tinybar starting balance
   const newAccount = await new AccountCreateTransaction()
     .setKey(newAccountPublicKey)
@@ -47,7 +47,7 @@ async function CreateWallet() {
 
   // Verify the account balance
   const accountBalance = await new AccountBalanceQuery()
-    .setAccountId(newAccountId)
+    .setAccountId('0.0.23599')
     .execute(client)
 
   console.log(
@@ -57,8 +57,10 @@ async function CreateWallet() {
   )
 
   return {
-    'public key': newAccountId.toString(),
-    'private key': newAccountPrivateKey.toString(),
+    'accountId' :newAccountId.toString(),
+    'publicKey': newAccountPublicKey.toString(),
+    'privateKey': newAccountPrivateKey.toString(),
+    'evmPrivateKey':newAccountPrivateKey.toStringRaw(),
     'balance': accountBalance.hbars.toTinybars().toString(),
   }
 }

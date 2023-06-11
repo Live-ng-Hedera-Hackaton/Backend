@@ -1,11 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const wallet = require('../controllers/create_wallet')
-
+const snd = require('../controllers/send')
 router.get('/create-wallet', async (req, res) => {
 
   try {
     const success = await wallet();
+    console.log(success);
+    res.send(success);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('An error occurred during the transfer.');
+  }
+});
+
+router.get('/send', async (req, res) => {
+
+  try {
+    const success = await snd();
     console.log(success);
     res.send(success);
   } catch (error) {
