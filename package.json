@@ -5,13 +5,17 @@
   "main": "src/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "dev": "nodemon server.js"
   },
   "author": "ayoseun",
   "license": "ISC",
   "dependencies": {
     "@hashgraph/sdk": "^2.26.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.1.4",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "flutterwave-node-v3": "^1.1.5",
+    "uuidv4": "^6.2.13"
   }
 }

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <title>
+      3-D Secure 2 with Payment Request API
+    </title>
+    <script src='https://www.w3.org/Tools/respec/respec-w3c-common' async
+    class='remove'></script>
+    <script class='remove'>
+      var respecConfig = {
+          github: "https://github.com/w3c/3ds/",
+          shortName:  "3ds",
+          edDraftURI:   "https://w3c.github.io/3ds/",
+          specStatus: "unofficial",
+          editors: [
+                {
+                    name:      "Ian Jacobs",
+                    company:   "W3C"
+                }
+          ],
+          useExperimentalStyles: true,
+         license:      "w3c-software-doc",
+         wg:           "Web Payments Working Group",
+         wgURI:        "https://www.w3.org/Payments/WG/",
+         wgPublicList: "public-payments-wg",
+         issueBase:    "https://github.com/w3c/3ds/issues/",
+        localBiblio: {
+          "tokenized-card": {
+            "href": "https://w3c.github.io/webpayments-methods-tokenization/",
+            "publisher": "W3C",
+            "title": "Tokenized Card Payment"
+          },
+          "EMVCO-3DS": {
+            "href": "https://www.emvco.com/emv-technologies/3d-secure/",
+            "publisher": "EMVCo",
+            "title": "EMV® 3-D Secure"
+          },
+        },
+      };
+    </script>
+    <style>
+    dt { margin-top: 0.75em; }
+    table { margin-top: 0.75em; border-collapse:collapse; border-style:hidden hidden none hidden }
+    table thead { border-bottom:solid }
+    table tbody th:first-child { border-left:solid }
+    table td, table th { border-left:solid; border-right:solid; border-bottom:solid thin; vertical-align:top; padding:0.2em }
+    li { margin-top: 0.5em; margin-bottom: 0.5em;}
+    </style>
+  </head>
+  <body>
+    <section id="abstract">
+      <p>
+        This specification defines a way to leverage 3DS2 in conjunction with
+        [[payment-request]].
+      </p>
+    </section>
+    <section id='sotd'>
+      <p>
+        The working group maintains <a href=
+        "https://github.com/w3c/3ds/issues">a list of all bug reports that the
+        group has not yet addressed</a>. Pull requests with proposed
+        specification text for outstanding issues are strongly encouraged.
+      </p>
+    </section>
+    <section class="informative">
+      <h2>
+        Introduction
+      </h2>
+      <p>
+        EMV 3-D Secure is a messaging protocol developed by EMVCo to enable
+        users to authenticate themselves with their card issuer when making
+        card-not-present (CNP) e-commerce purchases. It is designed to prevent
+        unauthorized CNP transactions and to protect the payment ecosystem from
+        CNP-related fraud.
+      </p>
+      <p>
+        There are several reasons a merchant may wish to support 3DS 2.x
+        (3DS2), including (but not limited to):
+      </p>
+      <ul>
+        <li>To reduce CNP-related fraud.
+        </li>
+        <li>To increase approval rates.
+        </li>
+        <li>It is required by Central Bank mandate (e.g., in India).
+        </li>
+      </ul>
+      <p>
+        This specification defines a way to leverage 3DS2 in conjunction with
+        [[payment-request]]. At a high level, it works as follows:
+      </p>
+      <ul>
+        <li>3DS2 flows involve risk analysis that takes as input information
+        about the transaction, payee, and payer. The payee therefore creates a
+        <a>ThreeDSRequest</a> that is part of the payment method-specific
+        <a>data</a> in the <a>PaymentRequest</a>.
+        </li>
+        <li>The <a data-lt=
+        "ThreeDSRequest.payeeChallengeInd">payeeChallengeInd</a> within the <a>
+          ThreeDSRequest</a> contributes to the computation of which <a>payment
+          handlers</a> the user agent should offer to the user.
+        </li>
+        <li>Then the user selects a <a>payment handler</a> that supports 3DS2,
+        the user agent provides relevant data to the <a>payment handler</a> to
+        initiate 3DS flows. The details of how the <a>payment handler</a>
+        initiates 3DS flows lies outside the scope of this specification.
+        </li>
+        <li>Once the user has completed interactions with the <a>payment
+        handler</a>, the payment handler returns a <a>ThreeDSResponse</a> as
+        part of the <a>PaymentResponse</a>.
+        </li>
+      </ul>
+      <p>
+        See <a href="#howtouse">how to use this specification within a payment
+        method specification</a> below.
+      </p>
+    </section>
+    <section id="exampleData">
+      <h2>
+        Examples
+      </h2>
+      <p>
+        The following example illustrates how the Tokenized Card Payment
+        Specification [[tokenized-card]] could be enhanced to include support
+        for the current specification.
+      </p>
+      <section>
+        <h3 id="request-example">
+          Request Example
+        </h3>
+        <pre class="example" title="Request including 3DS2">
+const methodData = [{
+  supportedMethods: ["tokenized-card"],
+  data: {
+    supportedNetworks: ['mastercard', 'visa', 'amex', 'discover', 'jcb', 'unionpay'],
+    supportedTypes: ['credit','debit'],
+    keyProviderURL: 'https://pspKeyProvider.example/tokenizedCardPublicKey',
+    payeeChallengeInd: mandated
+    // Not yet shown: payeeData or whatever form it takes
+  }
+}];
+
+const details = { ...total, etc.... };
+
+new PaymentRequest(methodData, details);
+        </pre>
+        <p>
+          The value <code>required</code> for <a data-lt=
+          "ThreeDSRequest.payeeChallengeInd">payeeChallengeInd</a> means that
+          the payee requires that for this payment method, a <a>payment
+          handler</a> must support 3DS2.
+        </p>
+      </section>
+      <section>
+        <h3>
+          Response Example
+        </h3>
+        <pre class="example" title="Response including 3DS2">
+{
+ displayLast4: "***6789",
+ displayExpiryMonth: "02",
+ displayExpiryYear: "22",
+ displayNetwork: "mastercard",
+ encryptedDetails: "QWxobHZ4bU4yWkt1QUFFU05GWjRHb0FCRkE9PQ==",
+ eci: "242", // for 3DS2
+ av: "...28 character authentication value ...", // for 3DS2
+ transStatus: "Y" // for 3DS2
+}
+        </pre>
+      </section>
+    </section>
+    <section data-dfn-for="ThreeDSRequest" data-link-for="ThreeDSRequest">
+      <h2>
+        <dfn>ThreeDSRequest</dfn> dictionary
+      </h2>
+      <p>
+        This section describes payment method specific data that is supplied as
+        part of the <code>data</code> argument to the PaymentRequest
+        constructor.
+      </p>
+      <pre class="idl">
+        dictionary ThreeDSRequest{
+                   ThreeDSChallengeInd          payeeChallengeInd;
+        };
+      </pre>
+      <p>
+        The <code>ThreeDSRequest</code> dictionary contains the following
+        members:
+      </p>
+      <dl>
+        <dt>
+          <dfn>payeeChallengeInd</dfn>
+        </dt>
+        <dd>
+          This optional member represents the payee's preferences regarding 3DS
+          flows for this payment method and this transaction. Absence of this
+          member means that the payee has not expressed a preference regarding
+          3DS2 flows. That corresponds to a value of <code>01</code> for the
+          <a>threeDSRequestorChallengeInd</a> in the 3DS2 specification.
+          <p class="issue" data-number="6"></p>
+        </dd>
+        <dt>
+          <dfn>payeeData</dfn>
+        </dt>
+        <dd>
+          <p class="note">
+            Need to specify required merchant/payee data and the form this
+            should take (in terms of a dictionary).
+          </p>
+        </dd>
+      </dl>
+      <section data-dfn-for="ThreeDSChallengeInd" data-link-for=
+      "ThreeDSChallengeInd">
+        <h3>
+          <dfn>ThreeDSChallengeInd</dfn> enum
+        </h3>
+        <p>
+          In the 3DS2 specification, the <a>threeDSRequestorChallengeInd</a>
+          field enables the <a>3DS Requestor</a> to express a preference
+          regarding the <a>challenge flow</a> for a transaction. In the Web
+          payments ecosystem, different parties may play the role of <a>3DS
+          Requestor</a>, including the payee and the <a>payment handler</a>. In
+          this, specification the <code>ThreeDSChallengeInd</code> refers
+          specifically to the preference of the payee, whether or not the payee
+          is the <a>3DS Requestor</a>. The values are defined to align with
+          those of the 3DS2 specification, but refer specifically to payee
+          preferences. Payment handler behavior will potentially depend on a
+          number of factors: the payee preferences defined below, but also user
+          preferences and other considerations as well.
+        </p>
+        <pre class="idl">
+          enum ThreeDSChallengeInd { "requested", "mandated", "none" };
+        </pre>
+        <dl>
+          <dt>
+            "<dfn>requested</dfn>"
+          </dt>
+          <dd>
+            The payee requests that, for this payment method and this
+            transaction, the <a>payment handler</a> SHOULD conduct a 3DS2 flow.
+            This is presumed to include both a <a>frictionless flow</a> and a
+            <a>challenge flow</a>. This value corresponds to a value of
+            <code>03</code> for the <a>threeDSRequestorChallengeInd</a> in the
+            3DS2 specification.
+          </dd>
+          <dt>
+            "<dfn>mandated</dfn>"
+          </dt>
+          <dd>
+            The payee indicates that, for this payment method and this
+            transaction, the <a>payment handler</a> MUST conduct a 3DS2 flow
+            because it is mandated for the payee. This is presumed to include
+            both a <a>frictionless flow</a> and a <a>challenge flow</a>. This
+            value corresponds to a value of <code>04</code> for the
+            <a>threeDSRequestorChallengeInd</a> in the 3DS2 specification.
+          </dd>
+          <dt>
+            "<dfn>none</dfn>"
+          </dt>
+          <dd>
+            The payee requests that, for this payment method and this
+            transaction, the <a>payment handler</a> SHOULD NOT conduct a 3DS2
+            flow. This value corresponds to a value of <code>02</code> for the
+            <a>threeDSRequestorChallengeInd</a> in the 3DS2 specification.
+          </dd>
+        </dl>
+        <p class="issue">
+          <a href="https://github.com/w3c/3ds/issues/8">From issue 8</a>:
+          Payment handlers will need shipping address, contact information,
+          order number, merchant id, acquirer id, merchant name.
+        </p>
+      </section>
+      <section>
+        <h2>
+          Updating payeeChallengeInd from onshippingaddresschange
+        </h2>
+        <p class="issue">
+          <a href="https://github.com/w3c/3ds/issues/8">From issue 8</a>: The
+          payee may wish to adjust <a>payeeChallengeInd</a> depending on the
+          shipping address. Thus, for example, when
+          <a>onshippingaddresschange</a> fires, the payee may wish to use
+          <a>updateWith()</a> to update the <a>payeeChallengeInd</a>.
+        </p>
+      </section>
+      <section data-dfn-for="ThreeDSResponse" data-link-for="ThreeDSResponse">
+        <h2>
+          <dfn>ThreeDSResponse</dfn> dictionary
+        </h2>
+        <pre class="idl">
+        dictionary ThreeDSResponse {
+                       DOMString       av;
+                       DOMString       eci;
+                       DOMString       transStatus;
+                       DOMString       transStatusReason;
+           required    DOMString       dsTransID;
+         };
+      </pre>
+        <dl>
+          <dt>
+            <dfn>av</dfn> member
+          </dt>
+          <dd>
+            This optional member is a <a>Payment Network</a>-specific
+            cryptographic value generated by the <a>Access Control Server</a>
+            (ACS) to provide a way, during authorisation processing, for the
+            authorisation system to validate the integrity of the
+            authentication result. The value is a 28-character string. The
+            value may be a 20-byte value that has been Base64 encoded, giving a
+            28-byte result.
+          </dd>
+          <dt>
+            <dfn>eci</dfn> member
+          </dt>
+          <dd>
+            This optional member is an <a>Electronic Commerce Indicator</a>, a
+            <a>Payment Network</a>-specific string to indicate the results of
+            user authentication.
+          </dd>
+          <dt>
+            <dfn>transStatus</dfn> member
+          </dt>
+          <dd>
+            This optional member indicates whether a transaction qualifies as
+            an authenticated transaction or account verification. It is a
+            1-character string whose <a>transaction status</a> values are
+            defined in [[EMVCO-3DS]].
+          </dd>
+          <dt>
+            <dfn>transStatusReason</dfn> member
+          </dt>
+          <dd>
+            In a failure scenario, this optional member explains why the
+            <a>transStatus</a> member has the specified value (for example "01"
+            means "card authentication failed"). It is a 2-character string
+            whose values are defined in [[EMVCO-3DS]].
+          </dd>
+          <dt>
+            <dfn>dsTransID</dfn> member
+          </dt>
+          <dd>
+            This member is a universally unique transaction identifier assigned
+            by the Directory Server (DS) to identify a single transaction. It
+            is a 36-character string defined in [[EMVCO-3DS]].
+          </dd>
+        </dl>
+        <p class="issue" data-number="3"></p>
+      </section>
+      <section id="howtouse">
+        <h2>
+          How to Use this Specification within a Payment Method Specification
+        </h2>
+        <p class="issue" data-number="9"></p>
+      </section>
+      <section id="security">
+        <h2>
+          Security and Privacy Considerations
+        </h2>
+        <section>
+          <h2>
+            Data Gathered by the Payment Handler
+          </h2>
+        </section>
+        <p class="note">
+          The Working Group is discussing privacy implications related to
+          payment handler data gathering.
+        </p>
+        <section>
+          <h2>
+            User Privacy Preference for Strong Authentication
+          </h2>
+          <p class="issue" data-number="7"></p>
+        </section>
+      </section>
+      <section id="dependencies">
+        <h2>
+          Dependencies
+        </h2>
+        <p>
+          This specification relies on several other underlying specifications.
+        </p>
+        <dl>
+          <dt>
+            Payment Request
+          </dt>
+          <dd>
+            The <dfn>PaymentRequest</dfn> and <dfn>PaymentResponse</dfn>
+            interfaces are defined in [[!payment-handler]]. That specification
+            also defines these terms: <dfn>data</dfn>, <dfn>updateWith()</dfn>
+            and <dfn>onshippingaddresschange</dfn>.
+          </dd>
+          <dt>
+            Payment Handler
+          </dt>
+          <dd>
+            The term <dfn data-lt="payment handlers">payment handler</dfn> is
+            defined in [[!payment-handler]].
+          </dd>
+          <dt>
+            EMVCo 3-D Secure
+          </dt>
+          <dd>
+            The terms <dfn data-cite="!EMVCO-3DS">Electronic Commerce
+            Indicator</dfn>, <dfn data-cite="!EMVCO-3DS">Access Control
+            Server</dfn>, <dfn data-cite="!EMVCO-3DS">Directory Server</dfn>,
+            <dfn data-cite="!EMVCO-3DS">transaction status</dfn>,
+            <dfn data-cite="!EMVCO-3DS">frictionless flow</dfn>,
+            <dfn data-cite="!EMVCO-3DS">challenge flow</dfn>, <dfn data-cite=
+            "!EMVCO-3DS">threeDSRequestorChallengeInd</dfn>, <dfn data-cite=
+            "!EMVCO-3DS">3DS Requestor</dfn>, and <dfn data-lt=
+            "Payment Network" data-cite="!EMVCO-3DS">Payment Networks</dfn> are
+            defined in [[EMVCO-3DS]].
+          </dd>
+        </dl>
+      </section>
+    </section>
+  </body>
+</html>
