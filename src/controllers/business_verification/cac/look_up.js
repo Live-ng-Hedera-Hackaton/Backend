@@ -1,6 +1,6 @@
 require('dotenv').config()
 
-async function lookUpName() {
+async function lookUpName(businessName) {
   const options = {
     method: 'GET',
     headers: {

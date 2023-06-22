@@ -37,7 +37,7 @@ router.get('/send', async (req, res) => {
   }
 });
 
-router.get('/sends', async (req, res) => {
+router.get('/charge', async (req, res) => {
 
   try {
     const success = await chargeCard();
@@ -52,7 +52,7 @@ router.get('/sends', async (req, res) => {
 
 router.get('/look-up-cac', async (req, res) => {
   try {
-    const success = await lookUpName();
+    const success = await lookUpName(req.body.businessName);
     console.log(success);
     res.send(success);
   } catch (error) {
@@ -64,7 +64,7 @@ router.get('/look-up-cac', async (req, res) => {
 
 router.get('/get-biz-shareholder', async (req, res) => {
   try {
-    const success = await getShareHolder();
+    const success = await getShareHolder(req.body.lookUpID);
     console.log(success);
     res.send(success);
   } catch (error) {
@@ -72,7 +72,7 @@ router.get('/get-biz-shareholder', async (req, res) => {
     res.status(500).send('An error occurred during the transfer.');
   }
 });
-
+0xFC5F5ae18214039c90d20d31824efE565BEeDaB4
 
 router.post('/verify-payment', async (req, res) => {
 
@@ -99,7 +99,7 @@ router.post('/init-repayment', async (req, res) => {
   }
 });
 
-router.post('/transfer', async (req, res) => {
+router.post('/transferHbar', async (req, res) => {
   const address = req.body.address;
   const amount = req.body.amount;
 
